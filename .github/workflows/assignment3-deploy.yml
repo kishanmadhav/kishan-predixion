@@ -1,0 +1,97 @@
+name: assignment3 - test, build, deploy
+
+on:
+  push:
+    branches: [main]
+    paths: ["assignment3/**", ".github/workflows/assignment3-deploy.yml"]
+  pull_request:
+    paths: ["assignment3/**"]
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: call-webhook
+  ECS_CLUSTER: call-webhook
+  ECS_SERVICE: call-webhook
+  CONTAINER_NAME: app
+
+permissions:
+  contents: read
+
+concurrency:
+  group: assignment3-deploy
+  cancel-in-progress: false        # never cancel a deploy halfway
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: assignment3 } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip, cache-dependency-path: assignment3/requirements*.txt }
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: assignment3/infra } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with: { terraform_version: "1.9.8" }
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, terraform]
+    runs-on: ubuntu-latest
+    environment: sandbox              # add required reviewers on this environment for a manual gate
+    permissions:
+      contents: read
+      id-token: write                 # lets the job mint an OIDC token; no AWS keys stored in GitHub
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume deploy role through OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}   # terraform output github_deploy_role_arn
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: image
+        working-directory: assignment3
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch current task definition
+        run: |
+          aws ecs describe-task-definition --task-definition "$ECS_SERVICE" \
+            --query taskDefinition > task-definition.json
+
+      - name: Render new image into task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.image.outputs.image }}
+
+      - name: Deploy (circuit breaker rolls back on failure)
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
+          wait-for-minutes: 15

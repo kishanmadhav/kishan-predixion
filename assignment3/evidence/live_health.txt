@@ -1,0 +1,20 @@
+$ curl -s http://call-webhook-1942776819.ap-south-1.elb.amazonaws.com/health  (2026-10-31T07:41:03Z)
+{"status":"ok"}
+HTTP 200
+
+$ aws ecs describe-services (running tasks / deployment state)
+-----------------------------------------------
+|              DescribeServices               |
++---------+-------------+----------+----------+
+| desired |   rollout   | running  | status   |
++---------+-------------+----------+----------+
+|  2      |  COMPLETED  |  2       |  ACTIVE  |
++---------+-------------+----------+----------+
+$ aws elbv2 describe-target-health
+healthy	healthy
+$ curl -X POST http://call-webhook-1942776819.ap-south-1.elb.amazonaws.com/webhook/call-completed
+{"status":"accepted","next_call_at":"2026-10-31T13:41:26.645689+05:30"}
+$ aws logs tail /ecs/call-webhook --since 5m (last 3)
+2026-10-31T07:41:26 {"ts": "2026-10-31T07:41:26.651302+00:00", "level": "INFO", "logger": "uvicorn.access", "msg": "10.40.1.125:17536 - \"POST /webhook/call-completed HTTP/1.1\" 202"}
+2026-10-31T07:41:26 {"ts": "2026-10-31T07:41:26.654708+00:00", "level": "WARNING", "logger": "crm", "msg": "crm delivery failed", "outbox_id": 1, "error": "ConnectError('[Errno -2] Name or service not known')"}
+2026-10-31T07:41:31 {"ts": "2026-10-31T07:41:31.359334+00:00", "level": "WARNING", "logger": "crm", "msg": "crm delivery failed", "outbox_id": 1, "error": "ConnectError('[Errno -2] Name or service not known')"}

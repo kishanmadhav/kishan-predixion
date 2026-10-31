@@ -1,0 +1,12 @@
+$ docker run -d -p 8000:8000 -e CRM_URL=... -e CRM_API_TOKEN=... call-webhook:local
+container health: healthy
+runs as uid: 10001
+$ curl -s localhost:8000/health
+{"status":"ok"}
+$ curl -s -X POST localhost:8000/webhook/call-completed -d {"call_id":"C1","account_id":"A1","disposition":"NO_ANSWER","attempt":0}
+{"status":"accepted","next_call_at":"2026-10-31T13:34:19.558650+05:30"}
+$ docker logs (JSON)
+{"ts": "2026-10-31T07:34:19.466319+00:00", "level": "INFO", "logger": "uvicorn.access", "msg": "172.17.0.1:50648 - \"GET /health HTTP/1.1\" 200"}
+{"ts": "2026-10-31T07:34:19.566587+00:00", "level": "INFO", "logger": "webhook", "msg": "call recorded", "call_id": "C1", "account_id": "A1", "disposition": "NO_ANSWER", "attempt": 0, "next_call_at": "2026-10-31T13:34:19.558650+05:30", "duplicate": false}
+{"ts": "2026-10-31T07:34:19.567523+00:00", "level": "INFO", "logger": "uvicorn.access", "msg": "172.17.0.1:50654 - \"POST /webhook/call-completed HTTP/1.1\" 202"}
+{"ts": "2026-10-31T07:34:19.608011+00:00", "level": "WARNING", "logger": "crm", "msg": "crm delivery failed", "outbox_id": 1, "error": "ConnectError('[Errno -2] Name or service not known')"}

@@ -1,0 +1,1211 @@
+data.aws_iam_policy_document.ecs_tasks_assume: Reading...
+data.aws_caller_identity.current: Reading...
+data.aws_iam_policy_document.ecs_tasks_assume: Read complete after 0s [id=1077804475]
+aws_ecr_repository.app: Refreshing state... [id=call-webhook]
+aws_secretsmanager_secret.crm_token: Refreshing state... [id=arn:aws:secretsmanager:ap-south-1:435636068826:secret:call-webhook/crm-api-token-tViRKZ]
+data.aws_caller_identity.current: Read complete after 0s [id=435636068826]
+data.aws_iam_policy_document.read_one_secret: Reading...
+data.aws_iam_policy_document.read_one_secret: Read complete after 0s [id=3306533706]
+aws_ecr_lifecycle_policy.app: Refreshing state... [id=call-webhook]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+ <= read (data resources)
+
+Terraform will perform the following actions:
+
+  # data.aws_iam_policy_document.github_assume will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "github_assume" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions = [
+              + "sts:AssumeRoleWithWebIdentity",
+            ]
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "repo:kishan/kishan-predixion:ref:refs/heads/main",
+                ]
+              + variable = "token.actions.githubusercontent.com:sub"
+            }
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "sts.amazonaws.com",
+                ]
+              + variable = "token.actions.githubusercontent.com:aud"
+            }
+
+          + principals {
+              + identifiers = [
+                  + (known after apply),
+                ]
+              + type        = "Federated"
+            }
+        }
+    }
+
+  # data.aws_iam_policy_document.github_deploy will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "github_deploy" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "ecr:GetAuthorizationToken",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "EcrAuth"
+        }
+      + statement {
+          + actions   = [
+              + "ecr:BatchCheckLayerAvailability",
+              + "ecr:BatchGetImage",
+              + "ecr:CompleteLayerUpload",
+              + "ecr:InitiateLayerUpload",
+              + "ecr:PutImage",
+              + "ecr:UploadLayerPart",
+            ]
+          + resources = [
+              + "arn:aws:ecr:ap-south-1:435636068826:repository/call-webhook",
+            ]
+          + sid       = "EcrPush"
+        }
+      + statement {
+          + actions   = [
+              + "ecs:DescribeTaskDefinition",
+              + "ecs:RegisterTaskDefinition",
+            ]
+          + resources = [
+              + "*",
+            ]
+          + sid       = "TaskDefinitions"
+        }
+      + statement {
+          + actions   = [
+              + "ecs:DescribeServices",
+              + "ecs:UpdateService",
+            ]
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "DeployService"
+        }
+      + statement {
+          + actions   = [
+              + "iam:PassRole",
+            ]
+          + resources = [
+              + (known after apply),
+              + (known after apply),
+            ]
+          + sid       = "PassOnlyOurRoles"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "ecs-tasks.amazonaws.com",
+                ]
+              + variable = "iam:PassedToService"
+            }
+        }
+    }
+
+  # aws_appautoscaling_policy.requests will be created
+  + resource "aws_appautoscaling_policy" "requests" {
+      + alarm_arns         = (known after apply)
+      + arn                = (known after apply)
+      + id                 = (known after apply)
+      + name               = "call-webhook-requests-per-target"
+      + policy_type        = "TargetTrackingScaling"
+      + resource_id        = "service/call-webhook/call-webhook"
+      + scalable_dimension = "ecs:service:DesiredCount"
+      + service_namespace  = "ecs"
+
+      + target_tracking_scaling_policy_configuration {
+          + disable_scale_in   = false
+          + scale_in_cooldown  = 300
+          + scale_out_cooldown = 60
+          + target_value       = 6000
+
+          + predefined_metric_specification {
+              + predefined_metric_type = "ALBRequestCountPerTarget"
+              + resource_label         = (known after apply)
+            }
+        }
+    }
+
+  # aws_appautoscaling_target.app will be created
+  + resource "aws_appautoscaling_target" "app" {
+      + arn                = (known after apply)
+      + id                 = (known after apply)
+      + max_capacity       = 10
+      + min_capacity       = 2
+      + resource_id        = "service/call-webhook/call-webhook"
+      + role_arn           = (known after apply)
+      + scalable_dimension = "ecs:service:DesiredCount"
+      + service_namespace  = "ecs"
+      + tags_all           = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+
+      + suspended_state (known after apply)
+    }
+
+  # aws_cloudwatch_log_group.app will be created
+  + resource "aws_cloudwatch_log_group" "app" {
+      + arn               = (known after apply)
+      + id                = (known after apply)
+      + log_group_class   = (known after apply)
+      + name              = "/ecs/call-webhook"
+      + name_prefix       = (known after apply)
+      + retention_in_days = 30
+      + skip_destroy      = false
+      + tags_all          = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+    }
+
+  # aws_ecs_cluster.main will be created
+  + resource "aws_ecs_cluster" "main" {
+      + arn      = (known after apply)
+      + id       = (known after apply)
+      + name     = "call-webhook"
+      + tags_all = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+
+      + setting {
+          + name  = "containerInsights"
+          + value = "enabled"
+        }
+    }
+
+  # aws_ecs_service.app will be created
+  + resource "aws_ecs_service" "app" {
+      + availability_zone_rebalancing      = "DISABLED"
+      + cluster                            = (known after apply)
+      + deployment_maximum_percent         = 200
+      + deployment_minimum_healthy_percent = 100
+      + desired_count                      = 2
+      + enable_ecs_managed_tags            = false
+      + enable_execute_command             = false
+      + health_check_grace_period_seconds  = 30
+      + iam_role                           = (known after apply)
+      + id                                 = (known after apply)
+      + launch_type                        = "FARGATE"
+      + name                               = "call-webhook"
+      + platform_version                   = (known after apply)
+      + scheduling_strategy                = "REPLICA"
+      + tags_all                           = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + task_definition                    = (known after apply)
+      + triggers                           = (known after apply)
+      + wait_for_steady_state              = true
+
+      + deployment_circuit_breaker {
+          + enable   = true
+          + rollback = true
+        }
+
+      + load_balancer {
+          + container_name   = "app"
+          + container_port   = 8000
+          + target_group_arn = (known after apply)
+            # (1 unchanged attribute hidden)
+        }
+
+      + network_configuration {
+          + assign_public_ip = false
+          + security_groups  = (known after apply)
+          + subnets          = (known after apply)
+        }
+    }
+
+  # aws_ecs_task_definition.app will be created
+  + resource "aws_ecs_task_definition" "app" {
+      + arn                      = (known after apply)
+      + arn_without_revision     = (known after apply)
+      + container_definitions    = jsonencode(
+            [
+              + {
+                  + environment            = [
+                      + {
+                          + name  = "CRM_URL"
+                          + value = "https://crm.example.internal/schedule"
+                        },
+                      + {
+                          + name  = "LOG_LEVEL"
+                          + value = "INFO"
+                        },
+                    ]
+                  + essential              = true
+                  + healthCheck            = {
+                      + command     = [
+                          + "CMD",
+                          + "python",
+                          + "-c",
+                          + "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)",
+                        ]
+                      + interval    = 15
+                      + retries     = 3
+                      + startPeriod = 15
+                      + timeout     = 5
+                    }
+                  + image                  = "435636068826.dkr.ecr.ap-south-1.amazonaws.com/call-webhook:b64495e"
+                  + logConfiguration       = {
+                      + logDriver = "awslogs"
+                      + options   = {
+                          + awslogs-group         = "/ecs/call-webhook"
+                          + awslogs-region        = "ap-south-1"
+                          + awslogs-stream-prefix = "app"
+                        }
+                    }
+                  + name                   = "app"
+                  + portMappings           = [
+                      + {
+                          + containerPort = 8000
+                          + protocol      = "tcp"
+                        },
+                    ]
+                  + readonlyRootFilesystem = false
+                  + secrets                = [
+                      + {
+                          + name      = "CRM_API_TOKEN"
+                          + valueFrom = "arn:aws:secretsmanager:ap-south-1:435636068826:secret:call-webhook/crm-api-token-tViRKZ"
+                        },
+                    ]
+                  + user                   = "10001:10001"
+                },
+            ]
+        )
+      + cpu                      = "512"
+      + enable_fault_injection   = (known after apply)
+      + execution_role_arn       = (known after apply)
+      + family                   = "call-webhook"
+      + id                       = (known after apply)
+      + memory                   = "1024"
+      + network_mode             = "awsvpc"
+      + requires_compatibilities = [
+          + "FARGATE",
+        ]
+      + revision                 = (known after apply)
+      + skip_destroy             = false
+      + tags_all                 = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + task_role_arn            = (known after apply)
+      + track_latest             = false
+
+      + runtime_platform {
+          + cpu_architecture        = "X86_64"
+          + operating_system_family = "LINUX"
+        }
+    }
+
+  # aws_eip.nat[0] will be created
+  + resource "aws_eip" "nat" {
+      + allocation_id        = (known after apply)
+      + arn                  = (known after apply)
+      + association_id       = (known after apply)
+      + carrier_ip           = (known after apply)
+      + customer_owned_ip    = (known after apply)
+      + domain               = "vpc"
+      + id                   = (known after apply)
+      + instance             = (known after apply)
+      + ipam_pool_id         = (known after apply)
+      + network_border_group = (known after apply)
+      + network_interface    = (known after apply)
+      + private_dns          = (known after apply)
+      + private_ip           = (known after apply)
+      + ptr_record           = (known after apply)
+      + public_dns           = (known after apply)
+      + public_ip            = (known after apply)
+      + public_ipv4_pool     = (known after apply)
+      + tags_all             = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc                  = (known after apply)
+    }
+
+  # aws_eip.nat[1] will be created
+  + resource "aws_eip" "nat" {
+      + allocation_id        = (known after apply)
+      + arn                  = (known after apply)
+      + association_id       = (known after apply)
+      + carrier_ip           = (known after apply)
+      + customer_owned_ip    = (known after apply)
+      + domain               = "vpc"
+      + id                   = (known after apply)
+      + instance             = (known after apply)
+      + ipam_pool_id         = (known after apply)
+      + network_border_group = (known after apply)
+      + network_interface    = (known after apply)
+      + private_dns          = (known after apply)
+      + private_ip           = (known after apply)
+      + ptr_record           = (known after apply)
+      + public_dns           = (known after apply)
+      + public_ip            = (known after apply)
+      + public_ipv4_pool     = (known after apply)
+      + tags_all             = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc                  = (known after apply)
+    }
+
+  # aws_iam_openid_connect_provider.github[0] will be created
+  + resource "aws_iam_openid_connect_provider" "github" {
+      + arn             = (known after apply)
+      + client_id_list  = [
+          + "sts.amazonaws.com",
+        ]
+      + id              = (known after apply)
+      + tags_all        = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + thumbprint_list = [
+          + "6938fd4d98bab03faadb97b34396831e3780aea1",
+          + "1c58a3a8518e8759bf075b76b750d4f2df264fcd",
+        ]
+      + url             = "https://token.actions.githubusercontent.com"
+    }
+
+  # aws_iam_role.execution will be created
+  + resource "aws_iam_role" "execution" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRole"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "ecs-tasks.amazonaws.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "call-webhook-execution"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role.github_deploy will be created
+  + resource "aws_iam_role" "github_deploy" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = (known after apply)
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "call-webhook-github-deploy"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role.task will be created
+  + resource "aws_iam_role" "task" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRole"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "ecs-tasks.amazonaws.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "call-webhook-task"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # aws_iam_role_policy.execution_secret will be created
+  + resource "aws_iam_role_policy" "execution_secret" {
+      + id          = (known after apply)
+      + name        = "read-crm-token"
+      + name_prefix = (known after apply)
+      + policy      = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action   = "secretsmanager:GetSecretValue"
+                      + Effect   = "Allow"
+                      + Resource = "arn:aws:secretsmanager:ap-south-1:435636068826:secret:call-webhook/crm-api-token-tViRKZ"
+                      + Sid      = "ReadCrmToken"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + role        = (known after apply)
+    }
+
+  # aws_iam_role_policy.github_deploy will be created
+  + resource "aws_iam_role_policy" "github_deploy" {
+      + id          = (known after apply)
+      + name        = "deploy-call-webhook"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # aws_iam_role_policy_attachment.execution_managed will be created
+  + resource "aws_iam_role_policy_attachment" "execution_managed" {
+      + id         = (known after apply)
+      + policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+      + role       = "call-webhook-execution"
+    }
+
+  # aws_internet_gateway.main will be created
+  + resource "aws_internet_gateway" "main" {
+      + arn      = (known after apply)
+      + id       = (known after apply)
+      + owner_id = (known after apply)
+      + tags_all = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id   = (known after apply)
+    }
+
+  # aws_lb.main will be created
+  + resource "aws_lb" "main" {
+      + arn                                                          = (known after apply)
+      + arn_suffix                                                   = (known after apply)
+      + client_keep_alive                                            = 3600
+      + desync_mitigation_mode                                       = "defensive"
+      + dns_name                                                     = (known after apply)
+      + drop_invalid_header_fields                                   = true
+      + enable_deletion_protection                                   = false
+      + enable_http2                                                 = true
+      + enable_tls_version_and_cipher_suite_headers                  = false
+      + enable_waf_fail_open                                         = false
+      + enable_xff_client_port                                       = false
+      + enable_zonal_shift                                           = false
+      + enforce_security_group_inbound_rules_on_private_link_traffic = (known after apply)
+      + id                                                           = (known after apply)
+      + idle_timeout                                                 = 60
+      + internal                                                     = false
+      + ip_address_type                                              = (known after apply)
+      + load_balancer_type                                           = "application"
+      + name                                                         = "call-webhook"
+      + name_prefix                                                  = (known after apply)
+      + preserve_host_header                                         = false
+      + security_groups                                              = (known after apply)
+      + subnets                                                      = (known after apply)
+      + tags_all                                                     = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                                                       = (known after apply)
+      + xff_header_processing_mode                                   = "append"
+      + zone_id                                                      = (known after apply)
+
+      + subnet_mapping (known after apply)
+    }
+
+  # aws_lb_listener.http will be created
+  + resource "aws_lb_listener" "http" {
+      + arn                                                                   = (known after apply)
+      + id                                                                    = (known after apply)
+      + load_balancer_arn                                                     = (known after apply)
+      + port                                                                  = 80
+      + protocol                                                              = "HTTP"
+      + routing_http_request_x_amzn_mtls_clientcert_header_name               = (known after apply)
+      + routing_http_request_x_amzn_mtls_clientcert_issuer_header_name        = (known after apply)
+      + routing_http_request_x_amzn_mtls_clientcert_leaf_header_name          = (known after apply)
+      + routing_http_request_x_amzn_mtls_clientcert_serial_number_header_name = (known after apply)
+      + routing_http_request_x_amzn_mtls_clientcert_subject_header_name       = (known after apply)
+      + routing_http_request_x_amzn_mtls_clientcert_validity_header_name      = (known after apply)
+      + routing_http_request_x_amzn_tls_cipher_suite_header_name              = (known after apply)
+      + routing_http_request_x_amzn_tls_version_header_name                   = (known after apply)
+      + routing_http_response_access_control_allow_credentials_header_value   = (known after apply)
+      + routing_http_response_access_control_allow_headers_header_value       = (known after apply)
+      + routing_http_response_access_control_allow_methods_header_value       = (known after apply)
+      + routing_http_response_access_control_allow_origin_header_value        = (known after apply)
+      + routing_http_response_access_control_expose_headers_header_value      = (known after apply)
+      + routing_http_response_access_control_max_age_header_value             = (known after apply)
+      + routing_http_response_content_security_policy_header_value            = (known after apply)
+      + routing_http_response_server_enabled                                  = (known after apply)
+      + routing_http_response_strict_transport_security_header_value          = (known after apply)
+      + routing_http_response_x_content_type_options_header_value             = (known after apply)
+      + routing_http_response_x_frame_options_header_value                    = (known after apply)
+      + ssl_policy                                                            = (known after apply)
+      + tags_all                                                              = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + tcp_idle_timeout_seconds                                              = (known after apply)
+
+      + default_action {
+          + order            = (known after apply)
+          + target_group_arn = (known after apply)
+          + type             = "forward"
+        }
+
+      + mutual_authentication (known after apply)
+    }
+
+  # aws_lb_target_group.app will be created
+  + resource "aws_lb_target_group" "app" {
+      + arn                                = (known after apply)
+      + arn_suffix                         = (known after apply)
+      + connection_termination             = (known after apply)
+      + deregistration_delay               = "30"
+      + id                                 = (known after apply)
+      + ip_address_type                    = (known after apply)
+      + lambda_multi_value_headers_enabled = false
+      + load_balancer_arns                 = (known after apply)
+      + load_balancing_algorithm_type      = (known after apply)
+      + load_balancing_anomaly_mitigation  = (known after apply)
+      + load_balancing_cross_zone_enabled  = (known after apply)
+      + name                               = "call-webhook"
+      + name_prefix                        = (known after apply)
+      + port                               = 8000
+      + preserve_client_ip                 = (known after apply)
+      + protocol                           = "HTTP"
+      + protocol_version                   = (known after apply)
+      + proxy_protocol_v2                  = false
+      + slow_start                         = 0
+      + tags_all                           = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + target_type                        = "ip"
+      + vpc_id                             = (known after apply)
+
+      + health_check {
+          + enabled             = true
+          + healthy_threshold   = 2
+          + interval            = 15
+          + matcher             = "200"
+          + path                = "/health"
+          + port                = "traffic-port"
+          + protocol            = "HTTP"
+          + timeout             = 5
+          + unhealthy_threshold = 3
+        }
+
+      + stickiness (known after apply)
+
+      + target_failover (known after apply)
+
+      + target_group_health (known after apply)
+
+      + target_health_state (known after apply)
+    }
+
+  # aws_nat_gateway.main[0] will be created
+  + resource "aws_nat_gateway" "main" {
+      + allocation_id                      = (known after apply)
+      + association_id                     = (known after apply)
+      + connectivity_type                  = "public"
+      + id                                 = (known after apply)
+      + network_interface_id               = (known after apply)
+      + private_ip                         = (known after apply)
+      + public_ip                          = (known after apply)
+      + secondary_private_ip_address_count = (known after apply)
+      + secondary_private_ip_addresses     = (known after apply)
+      + subnet_id                          = (known after apply)
+      + tags_all                           = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+    }
+
+  # aws_nat_gateway.main[1] will be created
+  + resource "aws_nat_gateway" "main" {
+      + allocation_id                      = (known after apply)
+      + association_id                     = (known after apply)
+      + connectivity_type                  = "public"
+      + id                                 = (known after apply)
+      + network_interface_id               = (known after apply)
+      + private_ip                         = (known after apply)
+      + public_ip                          = (known after apply)
+      + secondary_private_ip_address_count = (known after apply)
+      + secondary_private_ip_addresses     = (known after apply)
+      + subnet_id                          = (known after apply)
+      + tags_all                           = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+    }
+
+  # aws_route_table.private[0] will be created
+  + resource "aws_route_table" "private" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + route            = [
+          + {
+              + cidr_block                 = "0.0.0.0/0"
+              + nat_gateway_id             = (known after apply)
+                # (11 unchanged attributes hidden)
+            },
+        ]
+      + tags_all         = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # aws_route_table.private[1] will be created
+  + resource "aws_route_table" "private" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + route            = [
+          + {
+              + cidr_block                 = "0.0.0.0/0"
+              + nat_gateway_id             = (known after apply)
+                # (11 unchanged attributes hidden)
+            },
+        ]
+      + tags_all         = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # aws_route_table.public will be created
+  + resource "aws_route_table" "public" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + route            = [
+          + {
+              + cidr_block                 = "0.0.0.0/0"
+              + gateway_id                 = (known after apply)
+                # (11 unchanged attributes hidden)
+            },
+        ]
+      + tags_all         = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # aws_route_table_association.private[0] will be created
+  + resource "aws_route_table_association" "private" {
+      + id             = (known after apply)
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # aws_route_table_association.private[1] will be created
+  + resource "aws_route_table_association" "private" {
+      + id             = (known after apply)
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # aws_route_table_association.public[0] will be created
+  + resource "aws_route_table_association" "public" {
+      + id             = (known after apply)
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # aws_route_table_association.public[1] will be created
+  + resource "aws_route_table_association" "public" {
+      + id             = (known after apply)
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # aws_security_group.alb will be created
+  + resource "aws_security_group" "alb" {
+      + arn                    = (known after apply)
+      + description            = "Public ingress to the ALB"
+      + egress                 = [
+          + {
+              + cidr_blocks      = [
+                  + "10.40.0.0/16",
+                ]
+              + description      = "To tasks"
+              + from_port        = 8000
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 8000
+            },
+        ]
+      + id                     = (known after apply)
+      + ingress                = [
+          + {
+              + cidr_blocks      = [
+                  + "0.0.0.0/0",
+                ]
+              + description      = "HTTP"
+              + from_port        = 80
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 80
+            },
+          + {
+              + cidr_blocks      = [
+                  + "0.0.0.0/0",
+                ]
+              + description      = "HTTPS"
+              + from_port        = 443
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 443
+            },
+        ]
+      + name                   = "call-webhook-alb"
+      + name_prefix            = (known after apply)
+      + owner_id               = (known after apply)
+      + revoke_rules_on_delete = false
+      + tags_all               = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                 = (known after apply)
+    }
+
+  # aws_security_group.service will be created
+  + resource "aws_security_group" "service" {
+      + arn                    = (known after apply)
+      + description            = "Tasks accept traffic only from the ALB"
+      + egress                 = [
+          + {
+              + cidr_blocks      = [
+                  + "0.0.0.0/0",
+                ]
+              + description      = "HTTPS out (ECR, Secrets Manager, CloudWatch, CRM)"
+              + from_port        = 443
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = []
+              + self             = false
+              + to_port          = 443
+            },
+        ]
+      + id                     = (known after apply)
+      + ingress                = [
+          + {
+              + cidr_blocks      = []
+              + description      = "App port from ALB"
+              + from_port        = 8000
+              + ipv6_cidr_blocks = []
+              + prefix_list_ids  = []
+              + protocol         = "tcp"
+              + security_groups  = (known after apply)
+              + self             = false
+              + to_port          = 8000
+            },
+        ]
+      + name                   = "call-webhook-service"
+      + name_prefix            = (known after apply)
+      + owner_id               = (known after apply)
+      + revoke_rules_on_delete = false
+      + tags_all               = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                 = (known after apply)
+    }
+
+  # aws_subnet.private[0] will be created
+  + resource "aws_subnet" "private" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "ap-south-1a"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.10.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + tags                                           = {
+          + "Name" = "call-webhook-private-ap-south-1a"
+        }
+      + tags_all                                       = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Name"        = "call-webhook-private-ap-south-1a"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # aws_subnet.private[1] will be created
+  + resource "aws_subnet" "private" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "ap-south-1b"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.11.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + tags                                           = {
+          + "Name" = "call-webhook-private-ap-south-1b"
+        }
+      + tags_all                                       = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Name"        = "call-webhook-private-ap-south-1b"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # aws_subnet.public[0] will be created
+  + resource "aws_subnet" "public" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "ap-south-1a"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.0.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + tags                                           = {
+          + "Name" = "call-webhook-public-ap-south-1a"
+        }
+      + tags_all                                       = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Name"        = "call-webhook-public-ap-south-1a"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # aws_subnet.public[1] will be created
+  + resource "aws_subnet" "public" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "ap-south-1b"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.1.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + tags                                           = {
+          + "Name" = "call-webhook-public-ap-south-1b"
+        }
+      + tags_all                                       = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Name"        = "call-webhook-public-ap-south-1b"
+          + "Service"     = "call-webhook"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # aws_vpc.main will be created
+  + resource "aws_vpc" "main" {
+      + arn                                  = (known after apply)
+      + cidr_block                           = "10.40.0.0/16"
+      + default_network_acl_id               = (known after apply)
+      + default_route_table_id               = (known after apply)
+      + default_security_group_id            = (known after apply)
+      + dhcp_options_id                      = (known after apply)
+      + enable_dns_hostnames                 = true
+      + enable_dns_support                   = true
+      + enable_network_address_usage_metrics = (known after apply)
+      + id                                   = (known after apply)
+      + instance_tenancy                     = "default"
+      + ipv6_association_id                  = (known after apply)
+      + ipv6_cidr_block                      = (known after apply)
+      + ipv6_cidr_block_network_border_group = (known after apply)
+      + main_route_table_id                  = (known after apply)
+      + owner_id                             = (known after apply)
+      + tags                                 = {
+          + "Name" = "call-webhook"
+        }
+      + tags_all                             = {
+          + "DataClass"   = "pii-india"
+          + "Environment" = "sandbox"
+          + "ManagedBy"   = "terraform"
+          + "Name"        = "call-webhook"
+          + "Service"     = "call-webhook"
+        }
+    }
+
+Plan: 35 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + ecs_cluster            = "call-webhook"
+  + ecs_service            = "call-webhook"
+  + github_deploy_role_arn = (known after apply)
+  + health_url             = (known after apply)
+aws_cloudwatch_log_group.app: Creating...
+aws_iam_openid_connect_provider.github[0]: Creating...
+aws_iam_role.task: Creating...
+aws_vpc.main: Creating...
+aws_ecs_cluster.main: Creating...
+aws_eip.nat[1]: Creating...
+aws_eip.nat[0]: Creating...
+aws_iam_role.execution: Creating...
+aws_cloudwatch_log_group.app: Creation complete after 0s [id=/ecs/call-webhook]
+aws_eip.nat[0]: Creation complete after 1s [id=eipalloc-0ab54578bf0f656d7]
+aws_iam_openid_connect_provider.github[0]: Creation complete after 1s [id=arn:aws:iam::435636068826:oidc-provider/token.actions.githubusercontent.com]
+data.aws_iam_policy_document.github_assume: Reading...
+data.aws_iam_policy_document.github_assume: Read complete after 0s [id=1255552608]
+aws_iam_role.github_deploy: Creating...
+aws_eip.nat[1]: Creation complete after 2s [id=eipalloc-0392d75fca432ae31]
+aws_iam_role.execution: Creation complete after 2s [id=call-webhook-execution]
+aws_iam_role_policy.execution_secret: Creating...
+aws_iam_role_policy_attachment.execution_managed: Creating...
+aws_iam_role.task: Creation complete after 2s [id=call-webhook-task]
+aws_ecs_task_definition.app: Creating...
+aws_ecs_task_definition.app: Creation complete after 0s [id=call-webhook]
+aws_iam_role_policy_attachment.execution_managed: Creation complete after 1s [id=call-webhook-execution-20261031073602265800000001]
+aws_iam_role.github_deploy: Creation complete after 2s [id=call-webhook-github-deploy]
+aws_iam_role_policy.execution_secret: Creation complete after 1s [id=call-webhook-execution:read-crm-token]
+aws_ecs_cluster.main: Still creating... [00m10s elapsed]
+aws_vpc.main: Still creating... [00m10s elapsed]
+aws_ecs_cluster.main: Creation complete after 11s [id=arn:aws:ecs:ap-south-1:435636068826:cluster/call-webhook]
+aws_vpc.main: Creation complete after 12s [id=vpc-0683e9405be49fb31]
+aws_internet_gateway.main: Creating...
+aws_subnet.private[1]: Creating...
+aws_subnet.private[0]: Creating...
+aws_subnet.public[0]: Creating...
+aws_subnet.public[1]: Creating...
+aws_lb_target_group.app: Creating...
+aws_security_group.alb: Creating...
+aws_internet_gateway.main: Creation complete after 0s [id=igw-0523f73bd453c5f10]
+aws_route_table.public: Creating...
+aws_subnet.public[1]: Creation complete after 0s [id=subnet-0da8ffbaad230798f]
+aws_subnet.private[0]: Creation complete after 0s [id=subnet-0855b3d6ba0f44397]
+aws_subnet.public[0]: Creation complete after 0s [id=subnet-0d40e687193f08400]
+aws_nat_gateway.main[1]: Creating...
+aws_nat_gateway.main[0]: Creating...
+aws_subnet.private[1]: Creation complete after 0s [id=subnet-087df5adeedf015d4]
+aws_lb_target_group.app: Creation complete after 1s [id=arn:aws:elasticloadbalancing:ap-south-1:435636068826:targetgroup/call-webhook/92316e4cb1819c06]
+aws_route_table.public: Creation complete after 1s [id=rtb-0b1ed93d89bc671bf]
+aws_route_table_association.public[1]: Creating...
+aws_route_table_association.public[0]: Creating...
+aws_route_table_association.public[1]: Creation complete after 0s [id=rtbassoc-01cfc07b8590020e8]
+aws_route_table_association.public[0]: Creation complete after 1s [id=rtbassoc-042c2cd2b302b6bca]
+aws_security_group.alb: Creation complete after 2s [id=sg-0bc4989ecc9ac6349]
+aws_security_group.service: Creating...
+aws_lb.main: Creating...
+aws_security_group.service: Creation complete after 2s [id=sg-0fb459a236f85d1b2]
+aws_nat_gateway.main[0]: Still creating... [00m10s elapsed]
+aws_nat_gateway.main[1]: Still creating... [00m10s elapsed]
+aws_lb.main: Still creating... [00m10s elapsed]
+aws_nat_gateway.main[1]: Still creating... [00m20s elapsed]
+aws_nat_gateway.main[0]: Still creating... [00m20s elapsed]
+aws_lb.main: Still creating... [00m20s elapsed]
+aws_nat_gateway.main[0]: Still creating... [00m30s elapsed]
+aws_nat_gateway.main[1]: Still creating... [00m30s elapsed]
+aws_lb.main: Still creating... [00m30s elapsed]
+aws_nat_gateway.main[0]: Still creating... [00m40s elapsed]
+aws_nat_gateway.main[1]: Still creating... [00m40s elapsed]
+aws_lb.main: Still creating... [00m40s elapsed]
+aws_nat_gateway.main[1]: Still creating... [00m50s elapsed]
+aws_nat_gateway.main[0]: Still creating... [00m50s elapsed]
+aws_lb.main: Still creating... [00m50s elapsed]
+aws_nat_gateway.main[0]: Still creating... [01m00s elapsed]
+aws_nat_gateway.main[1]: Still creating... [01m00s elapsed]
+aws_lb.main: Still creating... [01m00s elapsed]
+aws_nat_gateway.main[0]: Still creating... [01m10s elapsed]
+aws_nat_gateway.main[1]: Still creating... [01m10s elapsed]
+aws_lb.main: Still creating... [01m10s elapsed]
+aws_nat_gateway.main[1]: Still creating... [01m20s elapsed]
+aws_nat_gateway.main[0]: Still creating... [01m20s elapsed]
+aws_lb.main: Still creating... [01m20s elapsed]
+aws_nat_gateway.main[0]: Still creating... [01m30s elapsed]
+aws_nat_gateway.main[1]: Still creating... [01m30s elapsed]
+aws_lb.main: Still creating... [01m30s elapsed]
+aws_nat_gateway.main[1]: Still creating... [01m40s elapsed]
+aws_nat_gateway.main[0]: Still creating... [01m40s elapsed]
+aws_lb.main: Still creating... [01m40s elapsed]
+aws_nat_gateway.main[0]: Creation complete after 1m44s [id=nat-0adfcdf4ce99bd893]
+aws_nat_gateway.main[1]: Still creating... [01m50s elapsed]
+aws_lb.main: Still creating... [01m50s elapsed]
+aws_nat_gateway.main[1]: Still creating... [02m00s elapsed]
+aws_lb.main: Still creating... [02m00s elapsed]
+aws_nat_gateway.main[1]: Still creating... [02m10s elapsed]
+aws_lb.main: Still creating... [02m10s elapsed]
+aws_nat_gateway.main[1]: Creation complete after 2m15s [id=nat-0d2e69608de4b2341]
+aws_route_table.private[1]: Creating...
+aws_route_table.private[0]: Creating...
+aws_route_table.private[1]: Creation complete after 0s [id=rtb-0f7f585c953c399f2]
+aws_route_table.private[0]: Creation complete after 1s [id=rtb-04477b51d6bae0813]
+aws_route_table_association.private[1]: Creating...
+aws_route_table_association.private[0]: Creating...
+aws_route_table_association.private[1]: Creation complete after 0s [id=rtbassoc-09c5e778d022763d7]
+aws_route_table_association.private[0]: Creation complete after 0s [id=rtbassoc-0e9fdfb44cde082cc]
+aws_lb.main: Still creating... [02m20s elapsed]
+aws_lb.main: Still creating... [02m30s elapsed]
+aws_lb.main: Creation complete after 2m32s [id=arn:aws:elasticloadbalancing:ap-south-1:435636068826:loadbalancer/app/call-webhook/16c268373817169a]
+aws_lb_listener.http: Creating...
+aws_lb_listener.http: Creation complete after 1s [id=arn:aws:elasticloadbalancing:ap-south-1:435636068826:listener/app/call-webhook/16c268373817169a/976c4d66822cdd3e]
+aws_ecs_service.app: Creating...
+aws_ecs_service.app: Still creating... [00m10s elapsed]
+aws_ecs_service.app: Still creating... [00m20s elapsed]
+aws_ecs_service.app: Still creating... [00m30s elapsed]
+aws_ecs_service.app: Still creating... [00m40s elapsed]
+aws_ecs_service.app: Still creating... [00m50s elapsed]
+aws_ecs_service.app: Still creating... [01m00s elapsed]
+aws_ecs_service.app: Creation complete after 1m5s [id=arn:aws:ecs:ap-south-1:435636068826:service/call-webhook/call-webhook]
+data.aws_iam_policy_document.github_deploy: Reading...
+aws_appautoscaling_target.app: Creating...
+data.aws_iam_policy_document.github_deploy: Read complete after 0s [id=3273909309]
+aws_iam_role_policy.github_deploy: Creating...
+aws_appautoscaling_target.app: Creation complete after 1s [id=service/call-webhook/call-webhook]
+aws_appautoscaling_policy.requests: Creating...
+aws_iam_role_policy.github_deploy: Creation complete after 2s [id=call-webhook-github-deploy:deploy-call-webhook]
+aws_appautoscaling_policy.requests: Creation complete after 1s [id=call-webhook-requests-per-target]
+
+Apply complete! Resources: 35 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+crm_secret_arn = "arn:aws:secretsmanager:ap-south-1:435636068826:secret:call-webhook/crm-api-token-tViRKZ"
+ecr_repository_url = "435636068826.dkr.ecr.ap-south-1.amazonaws.com/call-webhook"
+ecs_cluster = "call-webhook"
+ecs_service = "call-webhook"
+github_deploy_role_arn = "arn:aws:iam::435636068826:role/call-webhook-github-deploy"
+health_url = "http://call-webhook-1942776819.ap-south-1.elb.amazonaws.com/health"
