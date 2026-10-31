@@ -11,3 +11,5 @@ __pycache__/
 *.tfstate
 *.tfstate.*
 *.tfplan
+assignment2/accounts.csv
+assignment2/calls.csv
