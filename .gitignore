@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.db
+*.db-wal
+*.db-shm
+.env
+.ipynb_checkpoints/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
